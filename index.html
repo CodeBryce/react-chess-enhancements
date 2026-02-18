@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CDN Playable Chess</title>
+    <title>React Chess - Bryce thee Curator Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4 font-sans">
 
     <div id="root"></div>
 
@@ -22,20 +22,20 @@
             const [selectedSquare, setSelectedSquare] = useState(null);
             const [optionSquares, setOptionSquares] = useState([]);
             
-            // --- 10 ENHANCEMENTS START HERE ---
-            const [history, setHistory] = useState([]); // 1. Move History Log
-            const [isFlipped, setIsFlipped] = useState(false); // 2. Board Rotation
-            const [boardTheme, setBoardTheme] = useState('bg-slate-700'); // 3. Theme Customization
-            const [capturedPieces, setCapturedPieces] = useState({ w: [], b: [] }); // 4. Captured Pieces Tracker
+            // --- 10 ENHANCEMENTS (Omit History Log) ---
+            const [playerNames, setPlayerNames] = useState({ w: 'White', b: 'Black' }); // 1. Custom Player Names
+            const [isEditing, setIsEditing] = useState(false); // UI toggle for Player Names
+            const [isFlipped, setIsFlipped] = useState(false); // 2. Board Flip
+            const [boardTheme, setBoardTheme] = useState('bg-slate-700'); // 3. Theme Toggle
+            const [capturedPieces, setCapturedPieces] = useState({ w: [], b: [] }); // 4. Capture Tracker
             const [lastMove, setLastMove] = useState({ from: null, to: null }); // 5. Last Move Highlight
 
-            // 6. Persistence: LocalStorage Save/Load
+            // 6. Persistence: Load game from LocalStorage
             useEffect(() => {
-                const savedGame = localStorage.getItem('chessSave');
-                if (savedGame) {
-                    game.load(savedGame);
+                const saved = localStorage.getItem('chessSave');
+                if (saved) {
+                    game.load(saved);
                     setGame(new Chess(game.fen()));
-                    setHistory(game.history());
                 }
             }, []);
 
@@ -52,29 +52,25 @@
 
             function handleSquareClick(square) {
                 if (selectedSquare) {
-                    const move = game.move({
-                        from: selectedSquare,
-                        to: square,
-                        promotion: 'q' 
-                    });
+                    const move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
 
                     if (move) {
-                        // 7. Sound Effects: Move Audio
+                        // 7. Sound Effect
                         new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3').play();
                         
-                        // 4. Update Captured Logic
+                        // 4. Update Captured Tracker logic
                         if (move.captured) {
                             const color = move.color === 'w' ? 'b' : 'w';
                             setCapturedPieces(prev => ({
-                                ...prev,
-                                [color]: [...prev[color], move.captured]
+                                ...prev, [color]: [...prev[color], move.captured]
                             }));
                         }
 
+                        // Force state updates
                         setGame(new Chess(game.fen()));
-                        setHistory(game.history());
-                        setLastMove({ from: move.from, to: move.to });
-                        localStorage.setItem('chessSave', game.fen()); // 6. Persistence Save
+                        setLastMove({ from: move.from, to: move.to }); // 5. Highlight
+                        localStorage.setItem('chessSave', game.fen()); // 6. Persistence
+                        
                         setSelectedSquare(null);
                         setOptionSquares([]);
                         return;
@@ -92,49 +88,46 @@
                 }
             }
 
-            // 8. Undo Move Functionality
+            // 8. Undo Move
             const undoMove = () => {
                 game.undo();
                 setGame(new Chess(game.fen()));
-                setHistory(game.history());
                 setLastMove({ from: null, to: null });
             };
 
             const resetGame = () => {
                 const newGame = new Chess();
                 setGame(newGame);
-                setHistory([]);
                 setCapturedPieces({ w: [], b: [] });
                 setLastMove({ from: null, to: null });
-                localStorage.removeItem('chessSave');
+                localStorage.removeItem('chessSave'); 
                 setSelectedSquare(null);
                 setOptionSquares([]);
             };
 
             const status = () => {
-                if (game.in_checkmate()) return `Checkmate! ${game.turn() === 'w' ? 'Black' : 'White'} wins.`;
+                if (game.in_checkmate()) return `Checkmate! ${game.turn() === 'w' ? playerNames.b : playerNames.w} wins.`;
                 if (game.in_draw()) return "Draw!";
-                // 9. Visual Check Status logic
-                if (game.in_check()) return "CHECK!";
-                return `${game.turn() === 'w' ? "White's" : "Black's"} Turn`;
+                if (game.in_check()) return "CHECK!"; // 9. Visual Check Alert
+                return `${game.turn() === 'w' ? playerNames.w : playerNames.b}'s Turn`;
             };
 
             return (
-                <div className="flex flex-col lg:flex-row items-start gap-10 bg-gray-800 p-8 rounded-2xl shadow-2xl">
+                <div className="flex flex-col lg:flex-row items-center lg:items-start gap-10 bg-gray-800 p-8 rounded-2xl shadow-2xl border border-gray-700">
                     <div className="flex flex-col items-center gap-6">
                         <div className="text-center">
-                            <h1 className="text-3xl font-bold text-yellow-500 mb-2">React CDN Chess</h1>
-                            <p className={`text-lg font-medium ${game.in_check() ? 'text-red-500 animate-bounce' : 'text-gray-300'}`}>
+                            <h1 className="text-3xl font-bold text-yellow-500 mb-2 font-mono">React Chess</h1>
+                            <p className={`text-lg font-medium h-8 ${game.in_check() ? 'text-red-500 animate-pulse font-bold' : 'text-gray-300'}`}>
                                 {status()}
                             </p>
                         </div>
 
-                        {/* 4. Captured Display Top */}
+                        {/* 4. Captured Display */}
                         <div className="flex gap-1 h-8 text-xl opacity-70">
                             {capturedPieces.w.map((p, idx) => <span key={idx}>{pieceSymbols[p]}</span>)}
                         </div>
 
-                        {/* 2. Board Flip Implementation */}
+                        {/* 2. Board Flip Container */}
                         <div className={`grid grid-cols-8 border-4 border-gray-700 shadow-2xl ${isFlipped ? 'rotate-180' : ''}`}>
                             {board.map((row, i) => 
                                 row.map((square, j) => {
@@ -142,7 +135,6 @@
                                     const isDark = (i + j) % 2 === 1;
                                     const isSelected = selectedSquare === squareLabel;
                                     const isOption = optionSquares.includes(squareLabel);
-                                    // 5. Last Move visual cues
                                     const isLastMove = lastMove.from === squareLabel || lastMove.to === squareLabel;
 
                                     return (
@@ -155,10 +147,7 @@
                                                 ${isLastMove ? 'ring-2 ring-blue-400 inset-0' : ''}
                                             `}
                                         >
-                                            {isOption && (
-                                                <div className="absolute w-4 h-4 bg-black/20 rounded-full z-0"></div>
-                                            )}
-                                            
+                                            {isOption && <div className="absolute w-4 h-4 bg-black/20 rounded-full z-0"></div>}
                                             <span className={`z-10 select-none ${isFlipped ? 'rotate-180' : ''} ${square?.color === 'w' ? 'text-white drop-shadow-md' : 'text-black'}`}>
                                                 {square ? pieceSymbols[square.color === 'w' ? square.type.toUpperCase() : square.type] : ''}
                                             </span>
@@ -168,35 +157,40 @@
                             )}
                         </div>
                         
-                        {/* Captured Display Bottom */}
                         <div className="flex gap-1 h-8 text-xl opacity-70">
                             {capturedPieces.b.map((p, idx) => <span key={idx}>{pieceSymbols[p.toUpperCase()]}</span>)}
                         </div>
                     </div>
 
-                    {/* 10. Sidebar Information and Controls Panel */}
+                    {/* 10. Sidebar Panel (History Log Removed) */}
                     <div className="w-64 flex flex-col gap-4 bg-gray-900/50 p-6 rounded-xl border border-gray-700">
-                        <h2 className="text-xl font-bold border-b border-gray-700 pb-2">Game Tools</h2>
+                        <h2 className="text-xl font-bold border-b border-gray-700 pb-2">Control Center</h2>
                         
-                        <div className="grid grid-cols-2 gap-2">
-                            <button onClick={undoMove} className="bg-gray-600 hover:bg-gray-500 py-2 rounded text-sm transition-all">Undo</button>
+                        {/* 1. PLAYER NAMES ENHANCEMENT */}
+                        <div className="bg-black/30 p-4 rounded border border-white/5 text-sm">
+                            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Match Players</h3>
+                            {isEditing ? (
+                                <div className="flex flex-col gap-2">
+                                    <input className="bg-gray-800 p-2 rounded text-xs border border-gray-600" value={playerNames.w} onChange={(e) => setPlayerNames({...playerNames, w: e.target.value})} />
+                                    <input className="bg-gray-800 p-2 rounded text-xs border border-gray-600" value={playerNames.b} onChange={(e) => setPlayerNames({...playerNames, b: e.target.value})} />
+                                    <button onClick={() => setIsEditing(false)} className="bg-green-700 py-2 rounded text-xs font-bold mt-1">Save Names</button>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    <div className={`p-1 rounded ${game.turn() === 'w' ? "bg-yellow-500/20 text-yellow-500 font-bold" : ""}`}>White: {playerNames.w}</div>
+                                    <div className={`p-1 rounded ${game.turn() === 'b' ? "bg-yellow-500/20 text-yellow-500 font-bold" : ""}`}>Black: {playerNames.b}</div>
+                                    <button onClick={() => setIsEditing(true)} className="text-[10px] text-blue-400 hover:underline pt-2">Change Player Names</button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                            <button onClick={undoMove} className="bg-gray-600 hover:bg-gray-500 py-2 rounded text-sm font-semibold transition-all">Undo</button>
                             <button onClick={resetGame} className="bg-red-600 hover:bg-red-500 py-2 rounded text-sm font-bold transition-all">Reset</button>
                         </div>
 
-                        <button onClick={() => setIsFlipped(!isFlipped)} className="bg-blue-600 hover:bg-blue-500 py-2 rounded text-sm transition-all">Flip Board View</button>
-                        
-                        <button onClick={() => setBoardTheme(boardTheme === 'bg-slate-700' ? 'bg-green-800' : 'bg-slate-700')} className="bg-emerald-600 hover:bg-emerald-500 py-2 rounded text-sm transition-all">Toggle Colors</button>
-
-                        <div className="mt-4">
-                            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2 underline">Move History</h3>
-                            <div className="h-48 overflow-y-auto bg-black/30 p-2 rounded text-xs font-mono">
-                                {history.map((m, idx) => (
-                                    <div key={idx} className="py-1 border-b border-white/5">
-                                        {Math.floor(idx/2) + 1}{idx % 2 === 0 ? '. ' : '... '}{m}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                        <button onClick={() => setIsFlipped(!isFlipped)} className="bg-blue-600 hover:bg-blue-500 py-2 rounded text-sm transition-all shadow">Flip Board View</button>
+                        <button onClick={() => setBoardTheme(boardTheme === 'bg-slate-700' ? 'bg-green-800' : 'bg-slate-700')} className="bg-emerald-600 hover:bg-emerald-500 py-2 rounded text-sm transition-all shadow">Change Theme</button>
                     </div>
                 </div>
             );
